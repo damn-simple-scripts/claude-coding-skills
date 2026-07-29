@@ -1,0 +1,12 @@
+{
+  "name": "python-style",
+  "version": "1.0.0",
+  "description": "Defensive Python: one-purpose-per-line, atomic I/O, strict serialization",
+  "author": "Clemens Jung",
+  "skills": [
+    {
+      "path": "skills/SKILL.md",
+      "id": "python-style"
+    }
+  ]
+}

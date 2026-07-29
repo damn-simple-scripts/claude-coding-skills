@@ -1,0 +1,26 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "clemens-skills",
+  "description": "Clemens J's style enforcement and architectural patterns for Python, Rust, and web code.",
+  "owner": {
+    "name": "Clemens J",
+    "url": "https://github.com/damn-simple-scripts"
+  },
+  "plugins": [
+    {
+      "name": "python-style"
+      "description": "Python conventions: defensive coding, atomic I/O, strict serialization, empirical verification",
+      "version": "1.0.0"
+    },
+    {
+      "name": "rust-style",
+      "description": "Rust patterns: explicit error handling, fork/spawn hardening, Docker musl build checklist",
+      "version": "1.0.0"
+    },
+    {
+      "name": "web-style",
+      "description": "PHP/JS/Docker: vanilla no-framework, DoS-resistant validation, hardened CSP/SRI deployment",
+      "version": "1.0.0"
+    }
+  ]
+}
