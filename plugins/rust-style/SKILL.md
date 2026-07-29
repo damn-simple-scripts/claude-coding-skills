@@ -3,9 +3,7 @@ name: rust-style
 description: Clemens's Rust coding conventions, including architecture patterns for web-exposed services and Docker build practices. Use whenever writing, reviewing, editing, or generating Rust (.rs) code, Cargo.toml/Dockerfile changes, or discussing Rust error-handling/logging/IO/concurrency/process-isolation approach — even if the user doesn't explicitly ask for "style" or "conventions" to be applied. These conventions deliberately deviate from some idiomatic Rust defaults; apply them even when they conflict with what would normally be considered "cleaner" or more idiomatic code.
 ---
 
-# Rust Style — Clemens's Conventions
-
-Source: confirmed across stored memory and multiple past conversations. Not yet verified as universal across all of Clemens's Rust projects.
+# Rust Style — Conventions
 
 ## Confirmed rules
 
@@ -219,7 +217,7 @@ Unless a project has a stated compatibility constraint, use the newest stable ed
 
 ## Docker: two-stage minimal-image builds for Rust binaries
 
-Clemens's Rust binaries destined for production run in Docker, built as a **two-stage build**: a `builder` stage with the full Rust toolchain, and a minimal runtime stage receiving only the compiled binary. The strongest form, when the binary has no C-library dependencies (SQLite, OpenSSL, etc. need special static-linking handling if present), is `musl` libc + `FROM scratch`.
+Rust binaries destined for production run in Docker, built as a **two-stage build**: a `builder` stage with the full Rust toolchain, and a minimal runtime stage receiving only the compiled binary. The strongest form, when the binary has no C-library dependencies (SQLite, OpenSSL, etc. need special static-linking handling if present), is `musl` libc + `FROM scratch`.
 
 ### Why `musl` + `FROM scratch`
 By default, Rust statically links pure-Rust dependencies but *dynamically* links C libraries like `libc` — a binary built with the default `x86_64-unknown-linux-gnu` target still needs `glibc` present, which a `scratch` (empty) image doesn't have; it fails with `no such file or directory` because the dynamic linker itself is missing. Building against `x86_64-unknown-linux-musl` instead statically links libc too, producing a genuinely standalone binary (verify with `ldd <binary>` → `statically linked`). That binary can run in `FROM scratch` containing nothing but itself.
@@ -275,7 +273,7 @@ No Docker available in the sandbox this skill was drafted in, so the full `docke
 ## Applying this skill
 
 When writing or reviewing Rust code:
-1. Apply rules 1–28 without exception unless Clemens explicitly overrides for a specific case.
+1. Apply rules 1–28 without exception unless user explicitly overrides for a specific case.
 2. For web-exposed services, apply the architecture split (rule 17) and ask which security tier (hardened/medium/fast) applies if it isn't already stated.
 3. If existing project code contradicts these rules, don't silently "fix" it unless asked — but do flag the inconsistency.
 4. Every piece of nontrivial code should be traceable to a stated reason (rule 19).
