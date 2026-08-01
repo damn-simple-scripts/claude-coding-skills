@@ -7,9 +7,9 @@ description: Clemens's PHP/JavaScript/HTML/CSS web programming conventions — v
 
 ## Scope
 this skill is to be applied on html/css/js for websites.
-this skill is to be applied when coding dynamic webseite content using php.
-this skill covers javascript only as component in webbrowser for websites - no as backend like node.
-when scoping follow YAGNI priciple.
+this skill is to be applied when coding dynamic website content using php.
+this skill covers javascript only as a component in the webbrowser for websites - not as a backend like node.
+when scoping, follow the YAGNI principle.
 
 **PHP:** if not stated otherwise assume: plain PHP, vanilla, no framework (no Laravel, no Symfony), no Composer, no autoloader. Classes load via explicit `require_once __DIR__ . '/../path.php'`.
 
@@ -28,7 +28,7 @@ following YAGNI: Plain PHP (no framework, no Composer, no autoloader), vanilla J
 - It supports mobile.
 - It supports accessibility.
 - It supports dark/light theming.
-- 
+
 A framework failing any of these doesn't get used. This allowance is CSS-only — it does not extend to JS or PHP frameworks.
 
 Tailwind and Bootstrap are both examples, if user asks for a different framework follow that directive, if a connected MCP server or skill suggest a different framework, you may also follow that directive.
@@ -41,7 +41,7 @@ A line's purpose (assignment, validation, branch, return) should be legible from
 ### 3. Assume every input is adversarial
 Any PHP endpoint reading `$_GET`/`$_POST`/`$_COOKIE`/headers/uploaded files, and any JS reading `location`, form input, `postMessage`, or a fetched response, is handling attacker-reachable data.
 
-Input validation and output encoding are two separate, both-required steps — not substitutes for each other. Validate at the boundary where data enters (is can include files and the database itself in some conditions); encode at the boundary where data leaves (into HTML, into SQL, into a shell command, into a URL).
+Input validation and output encoding are two separate, both-required steps — not substitutes for each other. Validate at the boundary where data enters (this can include files and the database itself in some conditions); encode at the boundary where data leaves (into HTML, into SQL, into a shell command, into a URL).
 
 ### 4. Fail loud, no silent fallbacks — including silently-permissive defaults
 - **Prefer `isset()` + an early `return` over `??` when `??` only stands in for a presence check.** `??` is fine for a genuine default (`$tz = $config->get('TZ') ?? 'UTC'`); it's a problem when it quietly papers over "this should have been validated and wasn't." Avoid `??=` except where it genuinely initializes a cache slot.
@@ -50,7 +50,7 @@ Input validation and output encoding are two separate, both-required steps — n
 - Never leave a `catch` block empty without a comment saying why the failure is ignorable.
 - Never leave a JS Promise without a `.catch()` or an enclosing `try`/`await`.
 - Check what a function actually returns before trusting it — PHP returns ambiguous falsy values on failure (`strpos`, `array_search`, `file_get_contents`). Compare with `===`/`!==` against the specific failure value, never a loose truthy check.
-- fail loud does not mean to bubble an exception to the frontend, the frontend should never seen an unhandled exception.
+- Fail loud does not mean bubbling an exception to the frontend — the frontend should never see an unhandled exception.
 
 ```php
 // Wrong — strpos returns 0 (falsy) when the needle is at position 0, and
@@ -65,7 +65,7 @@ if (strpos($haystack, $needle) !== false) { ... }
 ### 5. Fail fast — always cheap checks before expensive ones
 Validate each input immediately after reading it; don't batch validation at the end. Order the checks so the cheapest possible rejection happens first and expensive work is never reached by input that was already invalid.
 
-This ordering is a **DoS control**, not just a performance habit: the attack is cost asymmetry, where a few bytes from an attacker buy hundreds of milliseconds of server CPU. Cheap checks first is what removes the asymmetry. See `references/php.md` for the concrete consequences (CSRF before Argon2id, PoW before Argon2id, 304 before DB).
+This ordering is a **DoS control**, not just a performance habit: the attack is cost asymmetry, where a few bytes from an attacker buy hundreds of milliseconds of server CPU. Cheap checks first is what removes the asymmetry. See `references/php.md` for the concrete consequences (CSRF before Argon2id, cost-shifting before Argon2id, 304 before DB).
 
 **HTTP method is validated first**, before session bootstrap, before body decoding, before anything else — a request that fails the method check must not pay the cost of (or trust the shape of) a JSON parse.
 
@@ -98,10 +98,10 @@ Non-negotiable for anything crypto-adjacent (HMAC option-integrity, PoW, passwor
 ### 11. Security review (STRIDE) at project completion, not per-step
 Trust-boundary mapping per file, authentication/encryption verification on every network path, injection review, unhandled-outcome check — collected in a backlog reviewed at completion. Flag any place where PHP/JS crosses a trust boundary as it's written.
 Relax on HTTP without TLS if this is only done within the same docker stack (i.e. the same internal trust zone).
-Also include the webapps users perspective in the review (e.g. if a maligious input may not affect the backend if could still be a problem for the user like XSS).
+Also include the webapp's users' perspective in the review (e.g. malicious input that doesn't affect the backend can still be a problem for the user, like XSS).
 Docker stack is in general trusted, but placing all containers in the same stack in the same network is not necessarily safe - we should avoid this if possible (e.g. one network connecting front facing reverse proxy with the php backend and one network that connects this backend with the database - so the webserver cannot access the database directly).
-Docker images should also be treated as potential vulnerable (we should use hardened images wherever possible).
-Docker shall be used to assert security in depth (e.g. a read-only root filesystem is more secure in context of >T<ampering).
+Docker images should also be treated as potentially vulnerable (we should use hardened images wherever possible).
+Docker shall be used to assert security in depth (e.g. a read-only root filesystem is more secure in the context of STRIDE's **T**ampering).
 
 ### 12. Logging is an implication, not a feature
 Logging isn't an independent preference — it's forced by the rules above. Handle all cases implies handle all exceptions, which implies there are exceptions that cannot be handled internally. Combine that with "an exception never reaches the frontend," and the conclusion follows: an error that can be neither handled nor shown has exactly one place left to go. Logging is what makes the other rules consistent with each other, so it is neither optional nor an afterthought.
