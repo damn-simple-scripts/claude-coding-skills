@@ -73,6 +73,28 @@ Scripts precede CSS so the parser doesn't wait on blocking CSS before it can sta
 - **Images** → one `<link rel="preload" as="image" imagesrcset="..." imagesizes="..." type="...">` **per offered format**, so the browser preloads only the format it supports. There's no privileged "main" image — every displayed image is responsive (`<img srcset>`/`<picture>`) and preloaded the same way.
 - **Always set `fetchpriority`** on every preload, header or tag: async JS = `high`, defer JS = `low`, CSS = `low` (the blocking stylesheet link already promotes it), fonts = `high`, images = `auto` (overridable per image).
 
+A single-file JS/CSS preload must carry the same `crossorigin` (and `integrity`, once computed) as the tag that actually consumes it. The browser matches a preload to its consumer by fetch signature — URL, `crossorigin`, and `integrity` together — not by URL alone; a mismatch means the preload and the real fetch are treated as two different requests, so the resource is fetched twice and the preload bought nothing.
+
+```html
+<!-- Wrong — preload omits crossorigin/integrity that the consuming tag carries,
+     so the browser doesn't recognize them as the same request and fetches twice -->
+<link rel="preload" href="/assets/js/bootstrap.bundle.min.js" as="script" fetchpriority="low">
+...
+<script src="/assets/js/bootstrap.bundle.min.js"
+        integrity="sha256-... sha384-... sha512-..."
+        crossorigin="anonymous"></script>
+
+<!-- Preferred — preload's crossorigin/integrity match the consuming tag exactly -->
+<link rel="preload" href="/assets/js/bootstrap.bundle.min.js" as="script"
+      crossorigin="anonymous"
+      integrity="sha256-... sha384-... sha512-..."
+      fetchpriority="low">
+...
+<script src="/assets/js/bootstrap.bundle.min.js"
+        integrity="sha256-... sha384-... sha512-..."
+        crossorigin="anonymous"></script>
+```
+
 ## Fonts
 System fonts preferred (`-apple-system`, `BlinkMacSystemFont`, `'Segoe UI'`, …) — avoid a web-font fetch entirely where possible. If one is unavoidable, preload it via an HTTP header:
 

@@ -69,11 +69,15 @@ This ordering is a **DoS control**, not just a performance habit: the attack is 
 
 **HTTP method is validated first**, before session bootstrap, before body decoding, before anything else — a request that fails the method check must not pay the cost of (or trust the shape of) a JSON parse.
 
-Typical ascending cost order, as an illustration of the principle rather than a fixed liturgy:
+**The general principle is cheapest-available source first, not just cheapest-operation first.** Request data (`$_GET`/`$_POST`) is already in memory; `$_FILES` costs a disk read; `$_SESSION` costs a session-store read; other local files cost a disk read; another service (the DB, an external API) costs a network round-trip and its own query cost on top. Check what's already in hand before reaching for what has to be fetched.
 
-`isset()` → `strlen()` → regex → bloom filter → crypto (HMAC, `password_verify`, PoW verify) → DB lookup
+Typical ascending cost order, as one instance of that principle rather than a fixed liturgy:
 
-Insert or omit stages as the endpoint needs — the rule is the ordering principle, not the specific list.
+`isset()` → `strlen()` → regex → bloom filter → cheap/DB-independent crypto (HMAC integrity, CSRF / session-token comparison against `$_SESSION`, PoW verification) → DB lookup → `password_verify()` (and any opportunistic rehash)
+
+`password_verify()` and rehashing sit at the end deliberately, after the DB lookup — not just because they're expensive, but because they have a hard data dependency: there's no stored hash to check against until the DB returns it. Anything that can reject without the DB (HMAC, CSRF/session-token comparison, a PoW check) stays ahead of the DB lookup because it's cheaper and doesn't need what the DB provides. PoW here is one illustrative example of shifting cost onto the client ahead of an expensive hash verification, not a mandatory step — see `references/php.md`'s "DoS resistance is an ordering property" for what the requirement actually is and other ways to satisfy it.
+
+Insert or omit stages as the endpoint needs, and reorder within a stage as its real data dependencies require — the rule is "cheapest available source first," not the specific list above.
 
 ### 6. Defense in depth, not defense in isolation
 A mechanism that proves one property doesn't get treated as proof of another. HMAC option-integrity (see `references/php.md`) proves a form value wasn't tampered with client-side; it does **not** prove the submitting user is authorized to submit it. Verify the MAC, then still run the ownership/authorization check separately. Don't let one control's success silently stand in for a different control that was never run.
@@ -109,6 +113,8 @@ Logging isn't an independent preference — it's forced by the rules above. Hand
 That derivation also constrains it. Logging sits on the request path, which makes it a potential bottleneck and a potential silent failure of its own — so level selection, write/flush policy, locking, and rotation are all decisions to make deliberately rather than defaults to inherit. See `references/php.md`.
 
 ## Where to go next
+
+**Examples convention:** longer, standalone code (a full redirect helper, a full endpoint, a full JS file) lives as a real file under `examples/` (e.g. `examples/php/`, `examples/js/`), not pasted inline into a reference doc — the reference `.md` links to it with a one-line description instead. Short 2-3 line illustrations stay inline as before; this only applies to anything long enough to be its own file.
 
 - **`references/php.md`** — no-YAGNI posture, PHP version targeting, DoS-resistant ordering, static analyzability, narrow require graphs, logging mechanics, request lifecycle, CSRF, redirects, reverse-proxy caching, prepared statements, DB roles/transactions, HMAC option-integrity, password handling, sidecar isolation, `exec` hardening, extension builds.
 - **`references/javascript.md`** — required init boilerplate, no IIFEs, namespacing, binding style, wrapping fetch, browser-availability checks, security defaults.

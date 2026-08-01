@@ -91,7 +91,7 @@ location ~ /\.(?!well-known) { deny all; }
 
 **Caching** — the proxy is a protection layer, not just a speed-up (`references/php.md`). Honor and serve validators so repeat traffic resolves to 304s instead of DB queries, and keep user-scoped responses out of any shared cache.
 Check for edgecases such as dynamic content/auth/cookies.
-PHP still decides what's cacheable per route — the proxy enforces it, it doesn't invent it.
+PHP still decides what's cacheable per route — the proxy enforces it, it doesn't invent it. A route with `csrf => true` is user-scoped by definition (`references/php.md`'s CSRF section) and never enters a shared cache; a route that never opts into CSRF has no such constraint and caches per the normal rules.
 
 **Per-location routing, explicit, not a catch-all**
 
@@ -105,7 +105,7 @@ location / { try_files $uri $uri/ /index.php$is_args$args; }
 ## Makefile
 create Makefiles instead of instructing user to do stuff or to run commands manually.
 Examples:
-- `make secrets` — creates `.env` from `config/env.example` if missing; fills **only placeholder values** (`change-me*`, an all-zero UUID) with random values (hex passwords, real UUIDs). Safe to re-run; never overwrites an already-set value.
+- `make secrets` — creates `.env` from `config/env.example` if missing; fills **only placeholder values** (`change-me*`, an all-zero UUID) with random values (hex passwords, real UUIDs). Safe to re-run; never overwrites an already-set value. This only randomizes credential-shaped placeholders — it does not fabricate or resolve container image digests (see "Base images" above for what to do when a real digest can't be resolved at write time).
 - `make deps` — fetches pinned frontend dependencies (`references/html-css.md`).
 - `make sri` — computes SRI hashes for vendored assets.
 - `make build` / `make up` / `make down` / `make migrate` / `make psql` — lifecycle targets.

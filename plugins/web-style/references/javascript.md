@@ -56,15 +56,62 @@ This variant also waits on cross-file dependencies (`window.bmPow`, `window.bmHt
 ## Namespacing
 Global namespaces are project-prefixed: `bmHttp`, `bmPow`, `bmPwStrength`, `bmUi` (project prefix + purpose). `window.bm*` globals are defined **at script-load time**, not deferred into `_init` — other scripts must be able to rely on them before `DOMContentLoaded` fires.
 
-Named handler functions, never anonymous inline closures: they're identifiable in a stack trace and removable via `removeEventListener`.
+Named handler functions, never anonymous inline closures — for callbacks **registered as a listener or a continuation**: `addEventListener` handlers and `.then()`/`.catch()` chains. A named function is identifiable in a stack trace and removable via `removeEventListener`; an anonymous closure registered this way is neither.
+
+This does **not** cover one-off iteration callbacks (`forEach`, `map`, `filter`, and similar) — they're never registered anywhere, aren't removed independently, and don't need a stack-trace identity beyond their caller's. An anonymous callback there is fine, and the skill's own examples use them (see "Binding style" below).
+
+For Promise continuations specifically, prefer `async`/`await` over a `.then()`/`.catch()` chain — it sidesteps the naming question entirely, since there's no continuation callback left to name:
+
+```javascript
+// Fine — anonymous callback, but it's a one-off iteration, not something registered.
+items.forEach(function (item) { ... });
+
+// Avoid — anonymous continuation callbacks.
+fetchThing().then(function (result) { ... }).catch(function (err) { ... });
+
+// Preferred — async/await removes the continuation callback altogether.
+async function loadThing() {
+    try {
+        const result = await fetchThing();
+        // ...
+    } catch (err) {
+        // ...
+    }
+}
+```
 
 ## Binding style
-Bind via `addEventListener` from the `_init` function — never an inline handler attribute. Select elements via `data-*` attributes, not classes or IDs repurposed as JS hooks:
+Bind via `addEventListener` from the `_init` function — never an inline handler attribute. Element selection has a preference order, not a hard ban on any of them: **`data-*` attributes first, class-based selection second, ID-based selection allowed as a fallback.**
 
 ```javascript
 document.querySelectorAll('form[data-pow-stage]').forEach(function (form) {
     form.addEventListener('submit', handlePowSubmit);
 });
+```
+
+IDs earn their keep for **cross-element references** — element A's hook needs to point at element B, and a self-contained `data-*` attribute on A alone can't express that (e.g. a password-visibility-toggle button that needs to find "its" input). Two patterns, in order of preference:
+
+```javascript
+// Preferred where A and B share a container — a shared data-* wrapper,
+// traversed with closest(). No id involved anywhere.
+// <div data-field-group>
+//   <button data-action="toggle-visibility">Show</button>
+//   <input data-role="password-input" type="password">
+// </div>
+function handleToggleVisibility(event) {
+    const group = event.currentTarget.closest('[data-field-group]');
+    const target = group.querySelector('[data-role="password-input"]');
+    target.type = target.type === 'password' ? 'text' : 'password';
+}
+
+// Fallback where A and B aren't in a shared container — target's id stored
+// in the trigger's data-* attribute, resolved via getElementById.
+// <button data-toggle-target="password-field">Show</button>
+// <input id="password-field" type="password">
+function handleToggleVisibility(event) {
+    const target = document.getElementById(event.currentTarget.dataset.toggleTarget);
+    target.type = target.type === 'password' ? 'text' : 'password';
+}
 ```
 
 ## Wrapping repeated operations
@@ -123,6 +170,11 @@ An `async` function called without `await` needs an explicit `.catch()`. An unha
 
 ### `postMessage`: always check `event.origin`
 Never act on a message without validating `event.origin` against an explicit allowlist.
+
+## Client-side validation is UX only — the backend check is mandatory
+A `required`/`pattern` attribute or a pre-submit JS check improves the experience — it saves the user a round trip — but it is not a security control: it runs in a browser the attacker fully controls and is trivially bypassed by sending the request directly. Client-side validation is **negotiable** — simplify or skip it under time pressure and it's not a real defect. The server-side validation of the same data is **not negotiable** — skipping it is a real defect regardless of what the client already checked.
+
+See `references/html-css.md`'s "Forms" section for the HTML-side statement of this rule, and `references/php.md`'s "YAGNI does not apply here" and "JSON: fail loud on decode" sections for what the mandatory backend half looks like — not duplicated here.
 
 ## Loading
 SRI in multiple hash formats simultaneously (see `references/html-css.md`). `async` for independent libraries with no DOM dependency; `defer` for scripts needing the DOM parsed first.
