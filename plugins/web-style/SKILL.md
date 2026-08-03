@@ -33,8 +33,6 @@ A framework failing any of these doesn't get used. This allowance is CSS-only �
 
 Tailwind and Bootstrap are both examples, if user asks for a different framework follow that directive, if a connected MCP server or skill suggest a different framework, you may also follow that directive.
 
-
-
 ### 2. Code is read left to right — front-load meaning, one purpose per line
 A line's purpose (assignment, validation, branch, return) should be legible from its first token, not discovered at the end. Each step gets its own line, so each step's outcome is individually checkable.
 
@@ -56,10 +54,10 @@ Input validation and output encoding are two separate, both-required steps — n
 // Wrong — strpos returns 0 (falsy) when the needle is at position 0, and
 // false when not found; a loose check conflates "found at start" with
 // "not found".
-if (strpos($haystack, $needle)) { ... }
+if (strpos(haystack: $haystack, needle: $needle)) { ... }
 
 // Preferred — strict comparison against the documented failure value
-if (strpos($haystack, $needle) !== false) { ... }
+if (strpos(haystack: $haystack, needle: $needle) !== false) { ... }
 ```
 
 ### 5. Fail fast — always cheap checks before expensive ones
@@ -77,6 +75,8 @@ Typical ascending cost order, as one instance of that principle rather than a fi
 
 `password_verify()` and rehashing sit at the end deliberately, after the DB lookup — not just because they're expensive, but because they have a hard data dependency: there's no stored hash to check against until the DB returns it. Anything that can reject without the DB (HMAC, CSRF/session-token comparison, a PoW check) stays ahead of the DB lookup because it's cheaper and doesn't need what the DB provides. PoW here is one illustrative example of shifting cost onto the client ahead of an expensive hash verification, not a mandatory step — see `references/php.md`'s "DoS resistance is an ordering property" for what the requirement actually is and other ways to satisfy it.
 
+The same source-cost logic is why the CSRF comparison sits after `isset()`/`strlen()`/regex rather than before them: the comparison itself is trivial, but reaching `$_SESSION` at all requires `session_start()`, which is a session-store read and a lock — so the in-memory checks go first.
+
 Insert or omit stages as the endpoint needs, and reorder within a stage as its real data dependencies require — the rule is "cheapest available source first," not the specific list above.
 
 ### 6. Defense in depth, not defense in isolation
@@ -88,7 +88,7 @@ A mechanism that proves one property doesn't get treated as proof of another. HM
 3. Micro-optimization for raw speed — only when explicitly requested
 
 ### 8. Separation of concerns: render and mutate are different code paths
-GET renders only. 
+GET renders only.
 POST/PUT/DELETE are minimal action endpoints. Different response shapes (HTML vs. JSON) mean different entry points — not one handler branching on method internally.
 
 This style choice should ensure that the code is easy to analyze and test.

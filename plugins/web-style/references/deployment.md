@@ -3,7 +3,17 @@
 Read this after `SKILL.md`'s cross-cutting rules.
 
 ## Base images
-Hardened base images, not default/upstream — `dhi.io/*` for PHP, and hardened or `*-alpine` variants for PostgreSQL/nginx/utility containers. **Pin by digest**, not just tag: `image:tag@sha256:...`. Make image references configurable via `.env` (`PHP_BUILD_IMAGE`, `PHP_RUNTIME_IMAGE`, `POSTGRES_IMAGE`, `NGINX_IMAGE`) so a digest bump happens in one place.
+Hardened base images, not default/upstream. This landscape moves fast — vendors gain and lose free tiers within months of each other — so don't default to memory here; check current availability, pricing, and licensing for whatever family you're considering **at write time**, the same way this skill already re-derives the PHP version against Debian stable rather than assuming (`references/php.md`).
+
+Starting points, not a fixed answer:
+- **Docker Hardened Images** (`dhi.io/*`, catalog at `hub.docker.com/hardened-images/catalog`) — broad OS/language/database coverage, community tier is free as of writing.
+- **Chainguard/Wolfi-based images** — increasingly common; some vendors now ship their own Wolfi variant directly (e.g. Elastic's `elasticsearch-wolfi` tag) rather than going through a third party. Check whether the upstream project you're basing an image on already offers one before reaching for a generic hardened base.
+- **Distroless images** (Google's, others) — minimal attack surface for runtime stages that need no shell; not a fit if the container needs `exec`-in debugging or a package manager at runtime.
+- **Hardened or `*-alpine` variants** for PostgreSQL/nginx/utility containers where the above don't apply.
+
+Don't anchor on one vendor/family as permanent. Bitnami is the cautionary case: its free catalog was deleted and rebuilt as a paid-plus-limited-free split within the same year Docker's hardened images went free — a well-known image family is not a guarantee of stable licensing or availability. Pick what's actually current, and expect to re-check next time this file is touched.
+
+**Pin by digest**, not just tag: `image:tag@sha256:...`. Make image references configurable via `.env` (`PHP_BUILD_IMAGE`, `PHP_RUNTIME_IMAGE`, `POSTGRES_IMAGE`, `NGINX_IMAGE`) so a digest bump happens in one place.
 
 ## Multi-stage builds
 A build stage installs headers and compiles anything native; the runtime stage receives only compiled artifacts and application code — no compiler toolchain, no build dependencies, no PECL. See `references/php.md`'s extensions section for the full worked example, including the shared-library-vs-headers distinction that's easy to get wrong.
@@ -44,6 +54,8 @@ Processing that is both high-risk and high-exposure — image/document conversio
 
 The PHP side hands over bytes and gets bytes back — the sidecar never receives anything that would be worth stealing.
 
+Same caveat as `references/php.md`: a project without room for a second container is a reason to ask, not a reason to silently skip isolation or silently refuse the request.
+
 ## Read-only filesystems everywhere
 Every service — not just PHP-FPM — runs `read_only: true` with `tmpfs` for whatever paths it must write (`/tmp`, `/run`, `/var/run`, `/var/run/postgresql`, session storage):
 
@@ -76,7 +88,7 @@ Explicit `pull_policy: build` on every service that uses image build within that
 
 Example:
 ```nginx
-location ^~ /rate_limitted/ {
+location ^~ /rate_limited/ {
     limit_req zone=api burst=10 nodelay;
     fastcgi_pass php:9000;
 }
@@ -91,7 +103,7 @@ location ~ /\.(?!well-known) { deny all; }
 
 **Caching** — the proxy is a protection layer, not just a speed-up (`references/php.md`). Honor and serve validators so repeat traffic resolves to 304s instead of DB queries, and keep user-scoped responses out of any shared cache.
 Check for edgecases such as dynamic content/auth/cookies.
-PHP still decides what's cacheable per route — the proxy enforces it, it doesn't invent it. A route with `csrf => true` is user-scoped by definition (`references/php.md`'s CSRF section) and never enters a shared cache; a route that never opts into CSRF has no such constraint and caches per the normal rules.
+PHP still decides what's cacheable per route — the proxy enforces it, it doesn't invent it. A CSRF-protected route is user-scoped by definition (`references/php.md`'s CSRF section) and never enters a shared cache; a route that never opts into CSRF has no such constraint and caches per the normal rules.
 
 **Per-location routing, explicit, not a catch-all**
 

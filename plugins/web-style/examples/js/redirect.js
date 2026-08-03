@@ -13,7 +13,7 @@
 // it reads a URL once and navigates once. There is no state to protect
 // against being entered twice, so the guard has nothing to guard.
 
-const target = document.documentElement.dataset.redirectUrl;
-if (target) {
-    window.location.href = target;
+const redirect_targetUrl = document.documentElement.dataset.redirectUrl;
+if (redirect_targetUrl) {
+    window.location.href = redirect_targetUrl;
 }

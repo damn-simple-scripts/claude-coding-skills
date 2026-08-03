@@ -3,7 +3,7 @@
 Read this after `SKILL.md`'s cross-cutting rules.
 
 ## Content Security Policy
-Strict baseline: `default-src 'self'; script-src 'self'; style-src 'self'` — no inline JS or CSS anywhere, unconditionally. All scripts and styles are external files. If a page needs to call an external API, that specific URL is added to `connect-src` for that page — not a static catch-all `connect-src` covering things most pages don't need.
+Strict baseline: `default-src 'self'; script-src 'self'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'` — no inline JS or CSS anywhere, unconditionally. `base-uri` and `frame-ancestors` are part of the baseline, not optional extras: `default-src` covers neither, so without them a `<base>` tag injection can re-point every relative URL on the page, and the document can be framed for clickjacking. Relax `frame-ancestors` to `'self'` (or a named origin) only where the page is genuinely meant to be embedded. All scripts and styles are external files. If a page needs to call an external API, that specific URL is added to `connect-src` for that page — not a static catch-all `connect-src` covering things most pages don't need.
 
 ## Self-host, don't live-link a CDN
 Default posture is self-hosting. If a third-party JS/CSS library is needed and nothing states otherwise, download it once and vendor it as a pinned, static file served from the project's own origin — not a live `<script src="https://cdn.example.com/...">`. A `make deps`-style target fetches pinned frontend dependencies; a `make sri` target computes their SRI hashes. Reach for an actual live CDN reference only when a project explicitly states that's the intended setup.
@@ -23,7 +23,7 @@ Tailwind and Bootstrap are safe examples, users or skills or MCP may suggest alt
 ## Subresource Integrity — on every external script and stylesheet
 Every `<script>` and `<link rel="stylesheet">` carries an `integrity` attribute computed in multiple hash formats simultaneously (sha256, sha384, sha512), plus `crossorigin="anonymous"`.
 
-Algorithm selection isn't hardcoded to "always emit all three": it's the intersection of `{sha256, sha384, sha512}` (SRI's spec-supported set) and whatever `hash_algos()` actually offers at generation time. If none of the three are available, omit integrity rather than emitting a useless one. If SRI is calculated statically, aim for all three of them so we are future-proof (in case sha256 may become deprecated).
+Algorithm selection isn't hardcoded to "always emit all three": it's the intersection of `{sha256, sha384, sha512}` (SRI's spec-supported set) and whatever the tool computing the hashes actually offers at generation time — that's normally the `make sri` shell target (`openssl dgst`/`shasum`), so query that toolchain, not a language-specific algorithm list. If none of the three are available, omit integrity rather than emitting a useless one. If SRI is calculated statically, aim for all three of them so we are future-proof (in case sha256 may become deprecated).
 
 `integrity`/`crossorigin` only make sense on single-file resources — an `imagesrcset` preload covering multiple format variants has no single file to hash, so it omits integrity.
 
@@ -103,7 +103,7 @@ Link: </assets/fonts/x.woff2>; rel=preload; as=font; type=font/woff2; crossorigi
 ```
 
 ## Escaping
-`htmlspecialchars($var, ENT_QUOTES, 'UTF-8')` on every user-input string rendered into HTML — no exceptions. This is the output-encoding half of `SKILL.md` rule 3; see `references/php.md`'s templating section for the full pattern.
+`htmlspecialchars(string: $var, flags: ENT_QUOTES, encoding: 'UTF-8')` on every user-input string rendered into HTML — no exceptions. This is the output-encoding half of `SKILL.md` rule 3; see `references/php.md`'s templating section for the full pattern.
 
 A value safe as element *content* is not automatically safe inside a `<script>` block or an unquoted attribute — those have different escaping requirements. To get a server-side value into client-side JS, pass it via a `data-*` attribute and read it with `dataset`:
 
@@ -113,7 +113,7 @@ A value safe as element *content* is not automatically safe inside a `<script>` 
 <script>const boxId = "<?= $boxId ?>";</script>
 
 <!-- Preferred -->
-<div id="box" data-box-id="<?= htmlspecialchars($boxId, ENT_QUOTES, 'UTF-8') ?>"></div>
+<div id="box" data-box-id="<?= htmlspecialchars(string: $boxId, flags: ENT_QUOTES, encoding: 'UTF-8') ?>"></div>
 ```
 
 ## `rel="noopener noreferrer"` on `target="_blank"` links
