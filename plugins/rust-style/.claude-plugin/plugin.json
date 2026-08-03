@@ -2,5 +2,5 @@
   "name": "rust-style",
   "version": "1.0.0",
   "description": "Clemens's Rust coding conventions, including architecture patterns for web-exposed services and Docker build practices. Use whenever writing, reviewing, editing, or generating Rust (.rs) code, Cargo.toml/Dockerfile changes, or discussing Rust error-handling/logging/IO/concurrency/process-isolation approach — even if the user doesn't explicitly ask for \"style\" or \"conventions\" to be applied. These conventions deliberately deviate from some idiomatic Rust defaults; apply them even when they conflict with what would normally be considered \"cleaner\" or more idiomatic code.",
-  "author": "Clemens Jung"
+  "author": { "name": "Clemens Jung" }
 }

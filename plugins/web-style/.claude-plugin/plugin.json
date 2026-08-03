@@ -2,5 +2,5 @@
   "name": "web-style",
   "version": "1.0.0",
   "description": "Clemens's PHP/JavaScript/HTML/CSS web programming conventions — vanilla PHP with explicit require_once (no framework, no Composer, no autoloader), no-YAGNI adversarial input handling with DoS-resistant cost ordering, statically-analyzable code, PHP version targeting and version-gate annotation, logging with per-level flush policy, vanilla browser JS (no IIFEs, required init boilerplate), mandatory HTTP method whitelisting, CSRF and HMAC option-integrity patterns, sidecar isolation for high-risk ingest, reverse-proxy caching as a defense layer, strict CSP with full SRI and self-hosted assets, and hardened digest-pinned Docker deployment. Use whenever writing, reviewing, editing, or generating PHP (.php), JavaScript (.js), HTML (.html), or CSS (.css) code, or discussing web-app architecture, form/API handling, session/auth design, or frontend-backend data flow — even if the user doesn't explicitly ask for \"style\" or \"conventions\" to be applied. Also use for Dockerized PHP/JS deployment questions.",
-  "author": "Clemens Jung"
+  "author": { "name": "Clemens Jung" }
 }
