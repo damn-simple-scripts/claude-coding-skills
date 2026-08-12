@@ -10,7 +10,7 @@
     {
       "name": "python-style",
       "description": "Python conventions: defensive coding, atomic I/O, strict serialization, empirical verification",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "category": "development",
       "source": "./plugins/python-style"
     },

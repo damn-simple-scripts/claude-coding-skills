@@ -64,6 +64,7 @@ Rule numbers are canonical and global: rule 16 is rule 16 in every file.
 - **u** Compare within the same logical type — a string is a representation, not the thing. Convert before comparing (`bytes.fromhex`, `ipaddress.ip_address`); the conversion validates for free where `==` on strings just returns a wrong answer. Where a comparison authenticates — MAC, token, password digest — use `hmac.compare_digest`; elsewhere a digest is a normalized hex string and `==` is right. The line is the environment, not the datatype.
 - **v** A docstring names what the function raises, including exceptions that arrive through functions it calls (`@throws X` preferred, then `@exception X`, then `:raises X:`). A function whose only purpose is to raise is exempt — the name in the reject/fail/raise family is the annotation.
 - **w** An exception you decide not to handle gets a comment on the line naming the exception that actually arrives and the condition — not the one that was caught on the way, and not a bare `# may raise`.
+- **x** `try` is for catching exceptions raised by calls to other code, not for wrapping your own `raise`. A block whose `except` only sees exceptions the same block raises itself has nothing to catch — the raise already does what the `try` was for. Tell: a bare `except (...): raise` with no handling, guarding a block where every exception in flight is self-raised.
 
 **24. Named regex groups for data extraction.** `(?P<name>...)` over positional groups, so extraction stays self-documenting and doesn't break silently on a reordering.
 

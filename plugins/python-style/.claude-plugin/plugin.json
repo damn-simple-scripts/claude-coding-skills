@@ -1,6 +1,6 @@
 {
   "name": "python-style",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Defensive Python: one-purpose-per-line, atomic I/O, strict serialization",
   "author": { "name": "Clemens Jung" }
 }

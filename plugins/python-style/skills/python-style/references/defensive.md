@@ -31,6 +31,7 @@ Rule 3 — the checklist:
 - **u)** Compare within the same logical type.
 - **v)** A docstring names what the function raises — including what it raises through.
 - **w)** An exception you decide not to handle gets a comment on the line.
+- **x)** `try` is for catching what other code raises, not for wrapping your own `raise`.
 
 Then:
 
@@ -484,6 +485,66 @@ def load_json(path: Path) -> Any:
 ```
 
 Name the exception that actually arrives, not the one that was caught on the way. `_read_bytes` catches `OSError` and raises `JsonIOError` from it, so `# throws OSError` at this call site documents an exception the caller will never see — a comment that is wrong is worse than no comment, because it is trusted. And name the condition: `# may raise` tells the reader nothing they had not already suspected.
+
+**x) `try` is for catching what other code raises, not for wrapping your own `raise`.**
+A `try` block exists to handle a failure that arrives from somewhere else — a call whose internals you don't control. Where every exception the block can raise is one it raises itself, via its own `raise`, there is nothing arriving from outside to catch, and the block is just a roundabout way of raising directly.
+
+This is a readability rule, not a correctness one — the wrapped and unwrapped forms behave identically. The tell is an `except (...): raise` with no handling in between: no logging, no cleanup, no translation into a different exception, nothing but the re-raise. That combination is the anti-pattern, because it means the `except` clause is decorative — the exception was always going to bubble, `try` or not.
+
+```python
+# Wrong — every exception this except clause can see, this same block
+# raised itself. The try buys nothing; the except+raise just relabels
+# what "raise" already does on its own.
+def reload_seconds(_interval_obj: dict, _seconds: float) -> int:
+    try:
+        _hours = _interval_obj.get("hours", 0)
+        _minutes = _interval_obj.get("minutes", 0)
+
+        if not isinstance(_hours, (int, float)):
+            raise TypeError(f"reload interval 'hours' must be numeric, got {type(_hours).__name__}")
+        if not isinstance(_minutes, (int, float)):
+            raise TypeError(f"reload interval 'minutes' must be numeric, got {type(_minutes).__name__}")
+        if _hours < 0 or _minutes < 0 or _seconds < 0:
+            raise ValueError("reload interval values must be non-negative")
+        return int(_hours * 3600 + _minutes * 60 + _seconds)
+    except (TypeError, ValueError):
+        raise
+
+# Preferred — no try. The raises already bubble; nothing wraps them.
+def reload_seconds(_interval_obj: dict, _seconds: float) -> int:
+    _hours = _interval_obj.get("hours", 0)
+    _minutes = _interval_obj.get("minutes", 0)
+
+    if not isinstance(_hours, (int, float)):
+        raise TypeError(f"reload interval 'hours' must be numeric, got {type(_hours).__name__}")
+    if not isinstance(_minutes, (int, float)):
+        raise TypeError(f"reload interval 'minutes' must be numeric, got {type(_minutes).__name__}")
+    if _hours < 0 or _minutes < 0 or _seconds < 0:
+        raise ValueError("reload interval values must be non-negative")
+    return int(_hours * 3600 + _minutes * 60 + _seconds)
+```
+
+**A `try` earns its place the moment it wraps a call to code you don't control** — a library parse, a dict/list access that might not have the key or index, a network or filesystem call — even if that same block also contains your own `raise`s alongside it. The rule targets the block that catches *only* its own raises, not every block that happens to contain one.
+
+```python
+# Right — the try is doing real work: int() genuinely raises from outside
+# this function on a non-digit capture. The ValueError this function
+# raises itself rides along in the same except, which is fine — the
+# block isn't decorative, it has a real external exception to catch.
+def parse_port(raw: str) -> int:
+    try:
+        _m = _port_pat.match(raw)          # re.Pattern.match — never raises
+        if _m is None:
+            raise ValueError(f"not a valid port string: {raw!r}")
+        _port = int(_m.group("port"))      # int() raises ValueError on a non-digit capture
+    except ValueError as e:
+        raise ValueError(f"could not parse port from {raw!r}") from e
+    return _port
+```
+
+**Annotate the call that raises, to make the genuine case visible.** In a block that mixes an external exception with your own `raise`s, comment each call with what it can raise — same convention as rule 3w, applied per line rather than once for the block. `_port_pat.match` above is annotated as raising nothing, precisely to rule it out; `int(...)` is annotated as the line actually supplying the external `ValueError`. That's what lets a reviewer confirm the `try` has a real reason to exist without re-deriving the call chain themselves, and it's the cheapest way to keep rule 3x's read from producing a false positive on a block that only looks self-contained.
+
+**Not mechanically checkable.** Whether "every exception in flight is self-raised" requires reading the block's actual calls, not just its syntax — a job for review, not `scripts/check_style.py`.
 
 ### 24. Named regex groups for data extraction
 Use named groups (`(?P<name>...)`) over positional groups so extraction and downstream field access stay self-documenting and don't break silently on a reordering. Pairs with rule 3c — split the work across staged patterns, each using named groups.
